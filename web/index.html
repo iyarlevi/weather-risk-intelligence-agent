@@ -16,6 +16,8 @@
       </div>
     </div>
     <div class="topbar-actions">
+      <button id="ranking-toggle" class="btn-secondary" type="button"
+        aria-controls="ranking-panel" aria-expanded="false">📊 <span id="ranking-toggle-label" class="wide-only">Show hub ranking</span><span class="narrow-only">Ranking</span></button>
       <label class="toggle" title="Read answers aloud">
         <input type="checkbox" id="speak-toggle" /> 🔊 Read aloud
       </label>
@@ -23,9 +25,9 @@
     </div>
   </header>
 
-  <main class="layout">
+  <main class="layout ranking-hidden" id="layout">
     <!-- Left: deterministic ranking straight from the API (no LLM involved) -->
-    <aside class="panel ranking-panel" aria-label="Hub ranking">
+    <aside class="panel ranking-panel" id="ranking-panel" aria-label="Hub ranking" hidden>
       <div class="panel-head">
         <h2>Hub ranking</h2>
         <span class="hint" title="Computed by the deterministic scoring model, not by the AI">model score</span>

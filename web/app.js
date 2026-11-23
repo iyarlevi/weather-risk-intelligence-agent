@@ -99,10 +99,8 @@ function renderAgent(resp, { restored = false } = {}) {
     list("Data sources", a.data_sources),
   );
 
-  const tools = resp.tool_calls.map((t) => t.name).join(", ") || "none";
   card.append(el("div", { class: "answer-meta" },
     el("span", { class: `badge conf-${a.confidence}`, title: a.confidence_reason }, `confidence: ${a.confidence}`),
-    el("span", { class: "badge", title: "Deterministic tools the agent called" }, `tools: ${tools}`),
     restored ? null : el("span", { class: "badge" }, `${(resp.latency_ms / 1000).toFixed(1)}s`),
   ));
   card.append(el("div", { class: "hint", style: "margin-top:4px" }, a.confidence_reason));
@@ -223,6 +221,17 @@ async function loadRanking() {
     list.replaceChildren(el("li", {}, `Couldn't load ranking: ${err.message}`));
   }
 }
+// The ranking panel is hidden by default; this button opens and closes it.
+const rankingToggle = $("ranking-toggle");
+rankingToggle.addEventListener("click", () => {
+  const panel = $("ranking-panel");
+  const open = panel.hidden;  // currently hidden -> open it
+  panel.hidden = !open;
+  $("layout").classList.toggle("ranking-hidden", !open);
+  rankingToggle.setAttribute("aria-expanded", String(open));
+  $("ranking-toggle-label").textContent = open ? "Hide hub ranking" : "Show hub ranking";
+});
+
 $("rank-hazard").addEventListener("change", loadRanking);
 $("rank-region").addEventListener("change", loadRanking);
 

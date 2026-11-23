@@ -24,9 +24,9 @@ uv run uvicorn app.api.main:app --reload
 ```
 
 - **Chat** with follow-up memory. Each answer shows its ranking table or key figures, a
-  confidence badge, the tools used, and expandable reasoning, assumptions and data sources.
+  confidence badge, and expandable reasoning, assumptions and data sources.
 - **Hub ranking panel** from the deterministic model (no AI), filterable by hazard and region.
-  Click a hub to ask why it scores that way.
+  Hidden by default; open it with "📊 Show hub ranking". Click a hub to ask why it scores that way.
 - **Grounding warnings**: if the AI quotes a number no tool returned, the answer shows it.
 - **Voice (bonus)**: 🎤 for speech-to-text and "Read aloud" for spoken answers, both through
   the browser's Web Speech API (Chrome, Edge, Safari). No extra server or keys needed.

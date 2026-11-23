@@ -85,6 +85,10 @@ body {
   min-height: 0;
 }
 
+/* Ranking panel hidden (the default): the chat takes the full width. */
+.layout.ranking-hidden { grid-template-columns: 1fr; }
+.ranking-panel[hidden] { display: none; }
+
 /* ---------------------------------------------------------------- ranking */
 .ranking-panel { padding: 14px; display: flex; flex-direction: column; overflow: hidden; }
 .panel-head { display: flex; justify-content: space-between; align-items: baseline; }
@@ -260,10 +264,15 @@ button { font: inherit; cursor: pointer; }
 }
 .btn-icon.listening { background: var(--high); border-color: var(--high); animation: pulse 1s infinite; }
 
+.narrow-only { display: none; }
+
 /* ---------------------------------------------------------------- mobile */
 @media (max-width: 820px) {
   .layout { grid-template-columns: 1fr; padding: 10px 16px; }
   .ranking-panel { max-height: 260px; }
-  .subtitle, .toggle { display: none; }
+  .subtitle, .toggle, .wide-only { display: none; }
+  .narrow-only { display: inline; }
+  .brand h1 { font-size: 15px; }
+  .logo { font-size: 22px; }
   .msg.user { max-width: 90%; }
 }
