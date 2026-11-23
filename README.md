@@ -164,6 +164,12 @@ uv run python -m evals.run
 uv run pytest
 ```
 
+## Design & Architecture
+
+Check out [docs/PLAN.md](docs/PLAN.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+
+
 ## AI Session
 
 https://claude.ai/code/cshk_0119uiYWrp6Q9Mu4rn8XrgWMFLBdHBw8VtnB5bsgyKACha
