@@ -35,6 +35,15 @@ CREATE TABLE IF NOT EXISTS nri_county (
     fetched_at    TEXT NOT NULL
 );
 
+-- One row per chat session: the full message list sent to Claude (JSON), so
+-- follow-up questions keep their context across API calls and server restarts.
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    session_id    TEXT PRIMARY KEY,
+    messages      TEXT NOT NULL,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS fetch_log (
     source        TEXT NOT NULL,
     key           TEXT NOT NULL,
@@ -143,3 +152,30 @@ def last_fetch(conn: sqlite3.Connection, source: str, key: str) -> str | None:
         "SELECT fetched_at FROM fetch_log WHERE source = ? AND key = ?", (source, key)
     ).fetchone()
     return row[0] if row else None
+
+
+# ---------------------------------------------------------------- chat_sessions
+
+
+def load_session(conn: sqlite3.Connection, session_id: str) -> list[dict]:
+    row = conn.execute(
+        "SELECT messages FROM chat_sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    return json.loads(row[0]) if row else []
+
+
+def save_session(conn: sqlite3.Connection, session_id: str, messages: list[dict]) -> None:
+    now = _now()
+    # Upsert that keeps the original created_at.
+    conn.execute(
+        "INSERT INTO chat_sessions VALUES (?, ?, ?, ?) "
+        "ON CONFLICT(session_id) DO UPDATE SET messages = excluded.messages, "
+        "updated_at = excluded.updated_at",
+        (session_id, json.dumps(messages), now, now),
+    )
+    conn.commit()
+
+
+def delete_session(conn: sqlite3.Connection, session_id: str) -> None:
+    conn.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
+    conn.commit()

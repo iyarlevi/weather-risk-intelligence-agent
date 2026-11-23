@@ -15,6 +15,28 @@ uv run python -m app.data_sources.ingest   # download weather + hazard data into
 uv run uvicorn app.api.main:app --reload
 ```
 
+## Ask the agent from the terminal
+
+```bash
+uv run python -m app.agent.agent "Which hubs in the Midwest are most exposed to winter disruption?"
+# Several questions in one session (the follow-up keeps the context):
+uv run python -m app.agent.agent "Why is Dallas high risk?" "How does it compare to Houston?"
+# Add --json to also print the structured answer
+```
+
+## How the agent works
+
+1. Claude (`claude-opus-5-5`) gets the question, the conversation history, and 7 tools:
+   `list_hubs`, `rank_hubs`, `get_hub_risk`, `compare_hubs`, `weather_stat`,
+   `active_alerts`, `get_methodology`.
+2. Every tool runs deterministic Python (the scoring engine, SQLite and NOAA). **The LLM never
+   calculates a number.** It only picks tools and explains their results.
+3. The final reply must match the `AgentAnswer` JSON schema (`app/agent/schemas.py`). The API
+   enforces it with `output_config.format`, and Pydantic validates it again in our code.
+4. A grounding check confirms that every number in `key_figures`/`ranking` appears in a tool
+   result, and that every hub id is real. Failures come back as `grounding_warnings`.
+5. Chat history is stored per `session_id` in SQLite, so follow-up questions keep their context.
+
 ## Repository layout
 
 ```
