@@ -16,7 +16,7 @@ The full AI agent session that built it: [docs/ai-session/](docs/ai-session/READ
 
 ```bash
 uv sync
-cp .env.example .env   # add your ANTHROPIC_API_KEY
+echo "ANTHROPIC_API_KEY=your-key" > .env
 uv run uvicorn app.api.main:app --reload
 ```
 
@@ -25,6 +25,15 @@ No download step is needed: the repo ships a starting copy of the database
 snapshot). On first start it's copied to `data/wria.db`, the working database. To fetch fresh
 data instead, run `uv run python -m app.data_sources.ingest` (~1-2 min), then rebuild the
 starting copy with `uv run python -m app.storage.seed`.
+
+Optional settings, also read from `.env` (or environment variables):
+
+| Variable | Default | What it does |
+|---|---|---|
+| `DATABASE_PATH` | `data/wria.db` | Where the working SQLite database lives |
+| `ALERT_WEBHOOK_URL` | empty | Where risk-change alerts are POSTed (e.g. a Slack webhook) |
+| `ALERT_THRESHOLD_POINTS` | `2.0` | Smallest score move that raises an alert |
+| `ALERT_SCHEDULE_CRON` | `0 6 * * *` | When the daily alert check runs; empty turns it off |
 
 ## Run with Docker
 
