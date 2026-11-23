@@ -1,0 +1,10 @@
+# Keep secrets, local state and dev files out of the build context.
+.env
+.venv/
+.git/
+data/wria.db*
+evals/results/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__/
+.claude/

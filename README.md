@@ -4,7 +4,8 @@ An AI agent that helps logistics analysts decide which US distribution hubs are 
 exposed to weather disruption. It ranks, compares and explains hub risk, and it bases
 its answers on public weather and hazard data plus a deterministic scoring model.
 
-> Status: work in progress. See [docs/PLAN.md](docs/PLAN.md) for the stages.
+Design and architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · build plan and
+scoring rationale: [docs/PLAN.md](docs/PLAN.md).
 
 ## Quick start
 
@@ -20,6 +21,28 @@ snapshot). On first start it's copied to `data/wria.db`, the working database. T
 data instead, run `uv run python -m app.data_sources.ingest` (~1-2 min), then rebuild the
 starting copy with `uv run python -m app.storage.seed`.
 
+## Run with Docker
+
+```bash
+docker build -t wria .
+docker run -p 8000:8000 --env-file .env wria   # then open http://localhost:8000
+```
+
+The image includes the starting database, so it works with no download.
+
+## Deploy (Render)
+
+`render.yaml` describes the service. In the Render dashboard: **New -> Blueprint**, pick this
+GitHub repo, and paste your `ANTHROPIC_API_KEY` when asked (it stays in Render, never in git).
+Render builds the Dockerfile and checks `/health`.
+
+On the free plan the service sleeps after ~15 minutes idle (the first request then takes about
+a minute), and its disk resets on each deploy: chat sessions and alert history start over
+from the starting database. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#5-deployment).
+
+A public URL lets anyone spend your Anthropic credits, so set a spending limit in the
+Anthropic Console.
+
 ## Chat UI
 
 Start the server and open <http://localhost:8000>:
@@ -27,12 +50,6 @@ Start the server and open <http://localhost:8000>:
 ```bash
 uv run uvicorn app.api.main:app --reload
 ```
-
-No download step is needed: the repo ships a starting copy of the database
-(`data/seed/wria-seed.db`, 3.4 MB, the 2021-2025 weather and FEMA data plus a baseline score
-snapshot). On first start it's copied to `data/wria.db`, the working database. To fetch fresh
-data instead, run `uv run python -m app.data_sources.ingest` (~1-2 min), then rebuild the
-starting copy with `uv run python -m app.storage.seed`.
 
 - **Chat** with follow-up memory. Each answer shows its ranking table or key figures, a
   confidence badge, and expandable reasoning, assumptions and data sources.
@@ -50,12 +67,6 @@ Start the server, then open the interactive docs at <http://localhost:8000/docs>
 ```bash
 uv run uvicorn app.api.main:app --reload
 ```
-
-No download step is needed: the repo ships a starting copy of the database
-(`data/seed/wria-seed.db`, 3.4 MB, the 2021-2025 weather and FEMA data plus a baseline score
-snapshot). On first start it's copied to `data/wria.db`, the working database. To fetch fresh
-data instead, run `uv run python -m app.data_sources.ingest` (~1-2 min), then rebuild the
-starting copy with `uv run python -m app.storage.seed`.
 
 | Method | Path | What it does | Calls the LLM? |
 |---|---|---|---|
@@ -112,6 +123,8 @@ config/          Hub list and scoring weights
 evals/           Evaluation cases + runner
 tests/           Unit tests
 docs/            Plan, architecture, AI session log
+Dockerfile       Container image (API + UI + starting database)
+render.yaml      Render deployment
 ```
 
 ## Data sources

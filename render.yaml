@@ -1,0 +1,14 @@
+# Render Blueprint: in the Render dashboard, New -> Blueprint -> pick this repo.
+# It builds the Dockerfile and asks for the secret values marked `sync: false`.
+services:
+  - type: web
+    name: weather-risk-intelligence-agent
+    runtime: docker
+    plan: free            # sleeps after ~15 min idle; the first request then takes ~1 min
+    healthCheckPath: /health
+    autoDeploy: true      # redeploy on every push to main
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false       # entered in the dashboard, never stored in git
+      - key: ALERT_WEBHOOK_URL
+        sync: false       # optional, e.g. a Slack incoming webhook
