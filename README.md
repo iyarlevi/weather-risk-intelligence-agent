@@ -4,6 +4,10 @@ An AI agent that helps logistics analysts decide which US distribution hubs are 
 exposed to weather disruption. It ranks, compares and explains hub risk, and it bases
 its answers on public weather and hazard data plus a deterministic scoring model.
 
+**Live demo:** <https://weather-risk-intelligence-agent-8l6j.onrender.com> (API docs at
+[`/docs`](https://weather-risk-intelligence-agent-8l6j.onrender.com/docs)). It runs on Render's
+free plan, so after ~15 minutes idle the first request can take about a minute while it wakes up.
+
 Design and architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · build plan and
 scoring rationale: [docs/PLAN.md](docs/PLAN.md).
 
