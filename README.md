@@ -163,3 +163,7 @@ uv run python -m evals.run
 ```bash
 uv run pytest
 ```
+
+## AI Session
+
+https://claude.ai/code/cshk_0119uiYWrp6Q9Mu4rn8XrgWMFLBdHBw8VtnB5bsgyKACha
