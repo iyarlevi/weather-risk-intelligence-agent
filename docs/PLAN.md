@@ -36,18 +36,33 @@ deterministic Python code over public data. The LLM's jobs are:
 | FEMA National Risk Index | County-level hazard risk scores (hurricane, coastal/riverine flood, winter weather, ice storm, tornado, heat, …) | NRI ArcGIS feature service / CSV |
 | NOAA NWS Alerts | Active alerts for a hub's location (live context) | `api.weather.gov/alerts/active?point=lat,lon` |
 
-## Risk KPI (deterministic)
-For each hub we compute **hazard sub-scores (0–100)**:
+## Risk KPI (deterministic): as built in stage 3
+Full definition: `config/scoring.yaml`. Code: `app/scoring/`.
 
-- **Winter**: % of days with snowfall ≥ 1 cm, % of days with min temp ≤ −10 °C, FEMA winter weather + ice storm rating
-- **Hurricane / wind**: days with gusts ≥ 90 km/h, FEMA hurricane rating
-- **Flood / heavy rain**: days with precipitation ≥ 50 mm, FEMA riverine + coastal flood rating
-- **Heat**: days with max temp ≥ 38 °C, FEMA heat wave rating
-- **Severe convective**: FEMA tornado + hail + strong wind rating
+| Hazard (weight) | Components |
+|---|---|
+| Winter (25%) | snow days ≥1 cm/yr, heavy-snow days ≥5 cm/yr, hard-freeze days ≤−15 °C/yr, FEMA winter-weather and ice-storm frequency |
+| Hurricane & wind (25%) | FEMA hurricane and strong-wind frequency, damaging-gust days ≥75 km/h/yr, strongest gust |
+| Flood (25%) | FEMA inland and coastal flood frequency, heavy-rain days ≥25 mm/yr, extreme-rain days ≥50 mm/yr, wettest day |
+| Tornado & hail (15%) | FEMA tornado and hail frequency (daily reanalysis can't see these storms) |
+| Heat (10%) | hot days ≥35 °C/yr, extreme-heat days ≥38 °C/yr, FEMA heat-wave frequency |
 
-Each raw metric is min-max normalised across all hubs, then combined with fixed, documented weights.
-**Composite Disruption Risk = weighted sum of the sub-scores**, and the weights live in `config/scoring.yaml`.
-Every score carries its component breakdown, so "why is Dallas high?" can be answered from the data.
+- Each component is mapped onto 0–100 using a **fixed scale** (`lo`, `hi`), not min-max across
+  hubs. A hub's score then changes only when its own data changes, which keeps alerts meaningful.
+- Hazard score = weighted average of its components. Composite = weighted average of the hazards.
+- Every result carries the full breakdown (raw value → scaled score → weight → contribution).
+  That's how the agent answers "why".
+
+**Design decisions found in the data (stage 3):**
+- FEMA **risk percentiles** include exposed property value, so every large urban county scores
+  95–100 for flood and heat. We use FEMA **annual event frequency** instead, which measures the
+  hazard itself.
+- FEMA cold-wave and heat-wave frequencies are relative to local climate (Miami shows 1.3 cold
+  waves a year). Cold wave is dropped, and heat wave gets a lower weight than our measured hot days.
+- ERA5 smooths extremes. Hurricanes show up in 5 years only as single events (Ida at New Orleans
+  in 2021, Beryl at Houston in 2024), so FEMA's long record leads the hurricane score.
+- FEMA data is per county. King County (Seattle) and Salt Lake County include mountains,
+  which inflates their FEMA winter frequency.
 
 ## Agent design
 - Tools exposed to the LLM: `list_hubs`, `rank_hubs`, `get_hub_risk`, `compare_hubs`,

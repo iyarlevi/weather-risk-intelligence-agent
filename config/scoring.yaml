@@ -1,0 +1,89 @@
+# Deterministic weather-disruption risk model.
+#
+# How a score is built:
+#   1. Each COMPONENT is a raw number (e.g. "snow days per year" or FEMA "winter storms per year").
+#   2. It is mapped onto 0-100 with a FIXED scale: score = clamp((value - lo) / (hi - lo)) * 100.
+#      Fixed scales (instead of ranking hubs against each other) mean a hub's score only
+#      changes when ITS data changes, not when another hub is added. That keeps alerts meaningful.
+#      lo/hi were calibrated on 2021-2025 data for the 21 hubs, so the worst hubs land near 100.
+#   3. A HAZARD score is the weighted average of its components.
+#   4. The COMPOSITE disruption risk is the weighted average of the hazard scores.
+#
+# Why FEMA annual frequency, not FEMA risk percentiles: the NRI risk percentile includes
+# exposed property value, so every large urban county (where all our hubs are) scores ~95-100
+# for flood and heat. Annual event frequency measures the hazard itself and separates hubs.
+
+version: "1.0"
+
+# Weather metrics computed from Open-Meteo daily rows (ERA5 reanalysis, ~25 km grid).
+# agg=days_per_year: average yearly count of days meeting the condition over the history window.
+# agg=max: the single most extreme day in the window.
+weather_metrics:
+  snow_days:          {column: snowfall_cm, op: ">=", threshold: 1.0,  agg: days_per_year, unit: "days/yr", label: "Days with >=1 cm snowfall"}
+  heavy_snow_days:    {column: snowfall_cm, op: ">=", threshold: 5.0,  agg: days_per_year, unit: "days/yr", label: "Days with >=5 cm snowfall"}
+  hard_freeze_days:   {column: tmin_c,      op: "<=", threshold: -15.0, agg: days_per_year, unit: "days/yr", label: "Days with min temp <=-15 C"}
+  damaging_gust_days: {column: gust_kmh,    op: ">=", threshold: 75.0, agg: days_per_year, unit: "days/yr", label: "Days with gusts >=75 km/h"}
+  max_gust_kmh:       {column: gust_kmh,    agg: max, unit: "km/h", label: "Strongest gust in window"}
+  heavy_rain_days:    {column: precip_mm,   op: ">=", threshold: 25.0, agg: days_per_year, unit: "days/yr", label: "Days with >=25 mm precipitation"}
+  extreme_rain_days:  {column: precip_mm,   op: ">=", threshold: 50.0, agg: days_per_year, unit: "days/yr", label: "Days with >=50 mm precipitation"}
+  max_daily_precip_mm: {column: precip_mm,  agg: max, unit: "mm", label: "Wettest day in window"}
+  hot_days:           {column: tmax_c,      op: ">=", threshold: 35.0, agg: days_per_year, unit: "days/yr", label: "Days with max temp >=35 C"}
+  extreme_heat_days:  {column: tmax_c,      op: ">=", threshold: 38.0, agg: days_per_year, unit: "days/yr", label: "Days with max temp >=38 C"}
+
+# FEMA NRI hazards are referenced by name and use annual_freq (events/yr).
+# "Not Applicable" in FEMA (e.g. hurricanes in Denver) counts as 0.
+
+hazards:
+  winter:
+    label: "Winter storms & extreme cold"
+    weight: 0.25
+    components:
+      - {source: weather, metric: snow_days,        lo: 0, hi: 30,  weight: 0.25}
+      - {source: weather, metric: heavy_snow_days,  lo: 0, hi: 6,   weight: 0.15}
+      - {source: weather, metric: hard_freeze_days, lo: 0, hi: 30,  weight: 0.15}
+      - {source: fema,    metric: winter_weather,   lo: 0, hi: 20,  weight: 0.30}
+      - {source: fema,    metric: ice_storm,        lo: 0, hi: 1.5, weight: 0.15}
+
+  hurricane_wind:
+    label: "Hurricanes & damaging wind"
+    weight: 0.25
+    components:
+      # 5 years is too short to see hurricanes reliably, so FEMA's long record leads.
+      - {source: fema,    metric: hurricane,          lo: 0,  hi: 0.3, weight: 0.45}
+      - {source: fema,    metric: strong_wind,        lo: 0,  hi: 7,   weight: 0.15}
+      - {source: weather, metric: damaging_gust_days, lo: 0,  hi: 6,   weight: 0.15}
+      - {source: weather, metric: max_gust_kmh,       lo: 60, hi: 150, weight: 0.25}
+
+  flood:
+    label: "Flooding & extreme rain"
+    weight: 0.25
+    components:
+      - {source: fema,    metric: inland_flood,        lo: 0,  hi: 6,   weight: 0.25}
+      - {source: fema,    metric: coastal_flood,       lo: 0,  hi: 7.5, weight: 0.20}
+      - {source: weather, metric: heavy_rain_days,     lo: 0,  hi: 25,  weight: 0.20}
+      - {source: weather, metric: extreme_rain_days,   lo: 0,  hi: 5,   weight: 0.15}
+      - {source: weather, metric: max_daily_precip_mm, lo: 50, hi: 200, weight: 0.20}
+
+  severe_storm:
+    label: "Tornadoes & hail"
+    weight: 0.15
+    components:
+      # Daily reanalysis can't see these small-scale storms, so they're FEMA-only.
+      - {source: fema, metric: tornado, lo: 0, hi: 1.5, weight: 0.5}
+      - {source: fema, metric: hail,    lo: 0, hi: 9,   weight: 0.5}
+
+  heat:
+    label: "Extreme heat"
+    weight: 0.10   # lower weight: heat mostly slows work rather than closing a hub
+    components:
+      - {source: weather, metric: hot_days,          lo: 0, hi: 90, weight: 0.35}
+      - {source: weather, metric: extreme_heat_days, lo: 0, hi: 30, weight: 0.35}
+      # FEMA heat waves are defined relative to local climate, so they get a lower weight.
+      - {source: fema,    metric: heat_wave,         lo: 0, hi: 20, weight: 0.30}
+
+# Labels for score ranges (applied to composite and hazard scores). Checked top-down.
+tiers:
+  - {min: 60, label: "High"}
+  - {min: 40, label: "Elevated"}
+  - {min: 20, label: "Moderate"}
+  - {min: 0,  label: "Low"}
