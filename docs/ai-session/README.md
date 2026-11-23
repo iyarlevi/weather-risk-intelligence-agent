@@ -50,25 +50,4 @@ why, and **pushing only after the user approved**, a rule the user set early in 
 - **The transcript ends when it was exported**, a few minutes before the final commit of
   stage 10.
 
-## What was removed or left out
 
-- **Redacted:** API keys (none were ever printed, but the exporter checks), email addresses,
-  and the user's name, username and GitHub handle. These are replaced with `[redacted]` or
-  `[email]`. Local paths therefore read `/Users/[redacted]/...`.
-- **Left out:**
-  - Automatic context the app attaches to messages (`<system-reminder>` blocks);
-  - the model's private reasoning ("thinking" blocks);
-  - the app's internal bookkeeping records (API request logs, file snapshots).
-
-  None of these are part of the visible conversation.
-- **Shortened (Markdown only):** tool outputs longer than 40 lines are cut in
-  `transcript.md`. `session.jsonl` keeps them whole.
-
-## Regenerating
-
-Claude Code keeps session logs in `~/.claude/projects/<project>/<session-id>.jsonl`:
-
-```bash
-python docs/ai-session/export_session.py docs/ai-session PART1.jsonl PART2.jsonl \
-  --subagent PART1/subagents/AGENT.jsonl --redact "Your Name" --redact yourusername
-```
