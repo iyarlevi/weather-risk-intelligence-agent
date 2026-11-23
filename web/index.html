@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather Risk Agent</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">⛈</span>
+      <div>
+        <h1>Weather Risk Intelligence</h1>
+        <p class="subtitle">Which distribution hubs are most exposed to weather disruption?</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <label class="toggle" title="Read answers aloud">
+        <input type="checkbox" id="speak-toggle" /> 🔊 Read aloud
+      </label>
+      <button id="new-chat" class="btn-secondary" type="button">New chat</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left: deterministic ranking straight from the API (no LLM involved) -->
+    <aside class="panel ranking-panel" aria-label="Hub ranking">
+      <div class="panel-head">
+        <h2>Hub ranking</h2>
+        <span class="hint" title="Computed by the deterministic scoring model, not by the AI">model score</span>
+      </div>
+      <div class="filters">
+        <select id="rank-hazard" aria-label="Rank by">
+          <option value="composite">Overall risk</option>
+          <option value="winter">Winter</option>
+          <option value="hurricane_wind">Hurricane &amp; wind</option>
+          <option value="flood">Flood</option>
+          <option value="severe_storm">Tornado &amp; hail</option>
+          <option value="heat">Heat</option>
+        </select>
+        <select id="rank-region" aria-label="Region">
+          <option value="">All regions</option>
+          <option>Midwest</option>
+          <option>Northeast</option>
+          <option>South</option>
+          <option>West</option>
+        </select>
+      </div>
+      <ol id="ranking-list" class="ranking-list"></ol>
+      <p class="hint small">Click a hub to ask why it scores that way.</p>
+      <p id="data-status" class="hint small"></p>
+    </aside>
+
+    <!-- Right: the conversation with the agent -->
+    <section class="panel chat-panel" aria-label="Chat">
+      <div id="messages" class="messages" aria-live="polite">
+        <div class="welcome" id="welcome">
+          <h2>Ask about hub weather risk</h2>
+          <p>Every number comes from public data (Open-Meteo, FEMA, NOAA) and a deterministic scoring
+            model. The AI picks which data to use and explains it.</p>
+          <div class="examples" id="examples"></div>
+        </div>
+      </div>
+
+      <form id="chat-form" class="composer">
+        <button id="mic" class="btn-icon" type="button" title="Speak your question" hidden>🎤</button>
+        <textarea id="input" rows="1" maxlength="2000"
+          placeholder="e.g. Which Midwest hubs are most exposed to winter disruption?"></textarea>
+        <button id="send" class="btn-primary" type="submit">Ask</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

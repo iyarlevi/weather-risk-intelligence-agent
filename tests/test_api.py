@@ -87,3 +87,36 @@ def test_chat_validation_and_errors(client):
     assert client.post("/chat", json={"message": "x" * 2001}).status_code == 422
     r = client.post("/chat", json={"message": "hi"})
     assert r.status_code == 502 and "LLM unavailable" in r.json()["detail"]
+
+
+def test_chat_history_rebuilds_turns(client):
+    from app.storage import db
+
+    conn = db.connect()
+    answer = make_answer(answer="Denver had 4.7%").model_dump_json()
+    db.save_session(
+        conn,
+        "hist-test",
+        [
+            {"role": "user", "content": "snow in denver?"},
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_use", "id": "t1", "name": "weather_stat", "input": {}}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "{}"}],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": answer}],
+            },
+        ],
+    )
+    turns = client.get("/chat/hist-test").json()
+    assert len(turns) == 1
+    assert turns[0]["question"] == "snow in denver?"
+    assert turns[0]["answer"]["answer"] == "Denver had 4.7%"
+    assert turns[0]["tools"] == ["weather_stat"]
+    assert client.get("/chat/no-such-session").json() == []
+    db.delete_session(conn, "hist-test")

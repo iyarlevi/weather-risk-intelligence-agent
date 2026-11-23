@@ -201,6 +201,49 @@ class WeatherRiskAgent:
             raise AgentError(f"Answer did not match the schema: {exc}") from exc
 
 
+class HistoryTurn(BaseModel):
+    question: str
+    answer: AgentAnswer
+    tools: list[str]
+
+
+def session_history(messages: list[dict]) -> list[HistoryTurn]:
+    """Rebuild the visible conversation (question -> final answer) from stored API messages.
+
+    A user's question is stored as a plain string. The tool results that follow it are lists
+    of blocks, so a string marks the start of a new turn. The turn's answer is the last text
+    block from the assistant before the next question.
+    """
+    turns: list[HistoryTurn] = []
+    question, answer_text, tool_names = None, None, []
+
+    def close_turn() -> None:
+        if question is not None and answer_text:
+            try:
+                turns.append(
+                    HistoryTurn(
+                        question=question,
+                        answer=AgentAnswer.model_validate_json(answer_text),
+                        tools=tool_names,
+                    )
+                )
+            except ValidationError:
+                pass  # skip a malformed turn rather than failing the whole history
+
+    for msg in messages:
+        if msg["role"] == "user" and isinstance(msg["content"], str):
+            close_turn()
+            question, answer_text, tool_names = msg["content"], None, []
+        elif msg["role"] == "assistant":
+            for block in msg["content"]:
+                if block.get("type") == "text":
+                    answer_text = block["text"]
+                elif block.get("type") == "tool_use":
+                    tool_names.append(block["name"])
+    close_turn()
+    return turns
+
+
 def format_answer(resp: AgentResponse) -> str:
     """Human-readable rendering for the CLI."""
     a = resp.answer

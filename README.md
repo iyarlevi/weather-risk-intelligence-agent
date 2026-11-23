@@ -15,6 +15,23 @@ uv run python -m app.data_sources.ingest   # download weather + hazard data into
 uv run uvicorn app.api.main:app --reload
 ```
 
+## Chat UI
+
+Start the server and open <http://localhost:8000>:
+
+```bash
+uv run uvicorn app.api.main:app --reload
+```
+
+- **Chat** with follow-up memory. Each answer shows its ranking table or key figures, a
+  confidence badge, the tools used, and expandable reasoning, assumptions and data sources.
+- **Hub ranking panel** from the deterministic model (no AI), filterable by hazard and region.
+  Click a hub to ask why it scores that way.
+- **Grounding warnings**: if the AI quotes a number no tool returned, the answer shows it.
+- **Voice (bonus)**: 🎤 for speech-to-text and "Read aloud" for spoken answers, both through
+  the browser's Web Speech API (Chrome, Edge, Safari). No extra server or keys needed.
+- Plain HTML/CSS/JS in `web/`, served by FastAPI. No build step. Light and dark mode, works on phones.
+
 ## API
 
 Start the server, then open the interactive docs at <http://localhost:8000/docs>:
@@ -26,6 +43,7 @@ uv run uvicorn app.api.main:app --reload
 | Method | Path | What it does | Calls the LLM? |
 |---|---|---|---|
 | `POST` | `/chat` | Ask the agent. Body: `{"message": "...", "session_id": "optional"}`. Reuse the returned `session_id` for follow-ups. | Yes |
+| `GET` | `/chat/{session_id}` | Past questions and answers (the UI redraws them after a refresh) | No |
 | `DELETE` | `/chat/{session_id}` | Forget a conversation | No |
 | `GET` | `/hubs?region=` | Hub list | No |
 | `GET` | `/hubs/{hub}/risk` | Full score breakdown for one hub | No |
