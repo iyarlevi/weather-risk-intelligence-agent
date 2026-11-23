@@ -83,7 +83,7 @@ Full definition: `config/scoring.yaml`. Code: `app/scoring/`.
 7. **Evaluation**: `evals/cases.yaml` plus a runner script (tool choice, numeric correctness, schema validity)
 8. **Alerts (bonus)**: scheduled re-score, diff against the last snapshot, webhook POST. Built as `app/alerts/` (daily APScheduler job + `POST /alerts/check`); a change is a move of at least 2 points or a tier change
 9. **Docs and deploy**: `docs/ARCHITECTURE.md`, README run instructions, `Dockerfile` + `render.yaml`. The repo ships a starting database (`data/seed/`) so a fresh deploy needs no download
-10. **Session export**: save this AI session transcript into `docs/ai-session/` (mandatory deliverable)
+10. **Session export**: the full AI session in `docs/ai-session/`: a readable `transcript.md`, the raw `session.jsonl`, both redacted, and the exporter script
 
 ## Scope and assumptions
 - About 20 hubs at representative metro locations (`config/hubs.yaml`). We assume the hubs are fictional and placed in real US cities.

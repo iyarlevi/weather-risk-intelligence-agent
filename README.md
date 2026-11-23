@@ -10,6 +10,7 @@ free plan, so after ~15 minutes idle the first request can take about a minute w
 
 Design and architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · build plan and
 scoring rationale: [docs/PLAN.md](docs/PLAN.md).
+The full AI agent session that built it: [docs/ai-session/](docs/ai-session/README.md).
 
 ## Quick start
 
