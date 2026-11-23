@@ -42,9 +42,6 @@ docker build -t wria .
 docker run -p 8000:8000 --env-file .env wria   # then open http://localhost:8000
 ```
 
-The image includes the starting database, so it works with no download.
-
-
 ## Chat UI
 
 Start the server and open <http://localhost:8000>:
@@ -57,7 +54,6 @@ uv run uvicorn app.api.main:app --reload
   confidence badge, and expandable reasoning, assumptions and data sources.
 - **Hub ranking panel** from the deterministic model (no AI), filterable by hazard and region.
   Hidden by default; open it with "📊 Show hub ranking". Click a hub to ask why it scores that way.
-- **Grounding warnings**: if the AI quotes a number no tool returned, the answer shows it.
 - **Voice (bonus)**: 🎤 for speech-to-text and "Read aloud" for spoken answers, both through
   the browser's Web Speech API (Chrome, Edge, Safari). No extra server or keys needed.
 - Plain HTML/CSS/JS in `web/`, served by FastAPI. No build step. Light and dark mode, works on phones.
