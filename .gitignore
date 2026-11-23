@@ -15,4 +15,3 @@ evals/results/
 
 # The starting copy of the database IS committed (see app/storage/seed.py).
 !data/seed/wria-seed.db
-.vercel/

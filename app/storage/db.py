@@ -84,7 +84,7 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     path = Path(path or get_settings().database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if is_app_db and not path.exists() and SEED_DB_PATH.exists():
-        # First start (fresh clone, or a new Vercel instance with an empty /tmp): begin from
+        # First start (fresh clone or a new container): begin from
         # the committed starting copy instead of an empty database.
         shutil.copyfile(SEED_DB_PATH, path)
     # check_same_thread=False: FastAPI may use the connection from worker threads.

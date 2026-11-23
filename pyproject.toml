@@ -15,10 +15,6 @@ dependencies = [
     "apscheduler>=3.10",
 ]
 
-# Vercel: the FastAPI app object it should serve (stage 9).
-[tool.vercel]
-entrypoint = "app.api.main:app"
-
 [dependency-groups]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.6"]
 

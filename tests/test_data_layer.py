@@ -128,7 +128,7 @@ def test_storage_round_trip(tmp_path):
 
 
 def test_app_database_starts_from_seed(tmp_path, monkeypatch):
-    # No database yet (fresh clone / new Vercel instance): connect() copies the seed.
+    # No database yet (fresh clone / new container): connect() copies the seed.
     if not db.SEED_DB_PATH.exists():
         pytest.skip("no seed database")
 

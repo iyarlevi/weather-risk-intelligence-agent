@@ -1,8 +1,0 @@
-# Not needed at runtime on Vercel (the starting database in data/seed/ IS needed).
-.venv/
-.env
-data/wria.db*
-evals/results/
-.pytest_cache/
-.ruff_cache/
-__pycache__/
