@@ -1,4 +1,4 @@
-"""SQLite storage: cached source data (and, in later stages, sessions and score history).
+"""SQLite storage: cached source data, chat sessions, score snapshots and risk alerts.
 
 SQLite fits here: the data is small (~40k daily rows), there is one writer, and the
 whole store is one file that ships with the app. No database server to run.
@@ -42,6 +42,30 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
     messages      TEXT NOT NULL,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
+);
+
+-- Stage 8: every alert check stores the full score table, so the next check can diff it.
+CREATE TABLE IF NOT EXISTS score_snapshots (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    taken_at            TEXT NOT NULL,
+    config_fingerprint  TEXT NOT NULL,    -- which scoring.yaml produced these scores
+    data_window         TEXT NOT NULL,    -- which history window they cover
+    scores              TEXT NOT NULL     -- JSON: {hub_id: {composite, tier, hazards: {...}}}
+);
+
+-- One row per detected change (a hub's composite or one hazard score).
+CREATE TABLE IF NOT EXISTS risk_alerts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at      TEXT NOT NULL,
+    snapshot_id     INTEGER NOT NULL REFERENCES score_snapshots(id),
+    hub_id          TEXT NOT NULL,
+    metric          TEXT NOT NULL,        -- "composite" or a hazard key
+    old_score       REAL NOT NULL,
+    new_score       REAL NOT NULL,
+    old_tier        TEXT NOT NULL,
+    new_tier        TEXT NOT NULL,
+    delivered       INTEGER NOT NULL,     -- 1 if the webhook accepted it
+    delivery_detail TEXT
 );
 
 CREATE TABLE IF NOT EXISTS fetch_log (
@@ -179,3 +203,66 @@ def save_session(conn: sqlite3.Connection, session_id: str, messages: list[dict]
 def delete_session(conn: sqlite3.Connection, session_id: str) -> None:
     conn.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
     conn.commit()
+
+
+# -------------------------------------------------------------- score_snapshots
+
+
+def save_snapshot(
+    conn: sqlite3.Connection, fingerprint: str, data_window: str, scores: dict
+) -> int:
+    cur = conn.execute(
+        "INSERT INTO score_snapshots (taken_at, config_fingerprint, data_window, scores) "
+        "VALUES (?, ?, ?, ?)",
+        (_now(), fingerprint, data_window, json.dumps(scores)),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def latest_snapshot(conn: sqlite3.Connection) -> dict | None:
+    row = conn.execute("SELECT * FROM score_snapshots ORDER BY id DESC LIMIT 1").fetchone()
+    if not row:
+        return None
+    out = dict(row)
+    out["scores"] = json.loads(out["scores"])
+    return out
+
+
+# ------------------------------------------------------------------ risk_alerts
+
+
+def save_alerts(
+    conn: sqlite3.Connection,
+    snapshot_id: int,
+    changes: Iterable[dict],
+    delivered: bool,
+    detail: str,
+) -> None:
+    now = _now()
+    conn.executemany(
+        "INSERT INTO risk_alerts (created_at, snapshot_id, hub_id, metric, old_score, "
+        "new_score, old_tier, new_tier, delivered, delivery_detail) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            (
+                now,
+                snapshot_id,
+                c["hub_id"],
+                c["metric"],
+                c["old_score"],
+                c["new_score"],
+                c["old_tier"],
+                c["new_tier"],
+                int(delivered),
+                detail,
+            )
+            for c in changes
+        ],
+    )
+    conn.commit()
+
+
+def recent_alerts(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    rows = conn.execute("SELECT * FROM risk_alerts ORDER BY id DESC LIMIT ?", (limit,))
+    return [dict(r) for r in rows]

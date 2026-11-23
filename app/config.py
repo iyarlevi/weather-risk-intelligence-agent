@@ -18,7 +18,13 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""
     database_path: Path = ROOT / "data" / "wria.db"
+    # Risk-change alerts (stage 8). Empty webhook URL = alerts are only logged and stored.
     alert_webhook_url: str = ""
+    # A score must move by at least this many points (0-100 scale) to raise an alert.
+    # A tier change (e.g. Elevated -> High) always alerts, whatever the size of the move.
+    alert_threshold_points: float = 2.0
+    # When the scheduled check runs (cron syntax, server local time). Empty = no scheduler.
+    alert_schedule_cron: str = "0 6 * * *"
 
     # Historical window: the last N full calendar years before the current year.
     history_years: int = 5

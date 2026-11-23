@@ -50,6 +50,8 @@ uv run uvicorn app.api.main:app --reload
 | `GET` | `/rankings?hazard=&region=&limit=` | Ranking by composite or one hazard | No |
 | `GET` | `/methodology` | Weights, scales, limitations | No |
 | `GET` | `/health` | Data loaded? API key configured? | No |
+| `POST` | `/alerts/check?notify=true` | Re-score now, compare with the last snapshot, send alerts | No |
+| `GET` | `/alerts?limit=` | Recent risk-change alerts | No |
 
 ```bash
 curl -s -X POST localhost:8000/chat -H 'content-type: application/json' \
@@ -105,6 +107,28 @@ docs/            Plan, architecture, AI session log
 
 The ingest is idempotent: it skips data that is already cached, and it waits and retries
 when Open-Meteo's free tier rate-limits it. Run it with `--refresh` to re-download everything.
+
+## Risk-change alerts (bonus)
+
+The server re-scores every hub once a day (06:00, set by `ALERT_SCHEDULE_CRON`) and compares
+the result with the previous snapshot stored in SQLite. It alerts when a hub's overall or hazard
+score moves by at least `ALERT_THRESHOLD_POINTS` (default 2.0) **or** changes tier
+(e.g. Elevated -> High). Alerts are POSTed as JSON to `ALERT_WEBHOOK_URL`. The payload has a
+`text` field, so a Slack incoming webhook works as-is. With no URL set, alerts are logged and
+stored, and `GET /alerts` lists them. The first check only records a baseline.
+
+Each alert says why the scores could have moved: `config_changed` (scoring.yaml was edited) or
+`data_window_changed` (a new year of history rolled in). The scores are built from history,
+so they move rarely: when a new year of data arrives, when FEMA updates its index, or when the
+weights change.
+
+```bash
+uv run python -m app.alerts.monitor             # run a check now (also: POST /alerts/check)
+uv run python -m app.alerts.monitor --no-notify # detect and store, don't call the webhook
+```
+
+To see an alert fire: run a check, change a hazard weight in `config/scoring.yaml` (the
+weights must still sum to 1), and run the check again.
 
 ## Evaluation
 

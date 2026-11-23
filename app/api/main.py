@@ -12,6 +12,8 @@ Endpoints:
   GET    /rankings              ranking by composite or one hazard (?hazard=&region=&limit=)
   GET    /methodology           weights, scales, limitations
   GET    /health                data loaded? API key configured?
+  POST   /alerts/check          re-score now, diff with the last snapshot, notify on changes
+  GET    /alerts                recent risk-change alerts
 
 The /hubs, /rankings and /methodology endpoints never call the LLM. They return the
 deterministic model directly, which keeps them fast and free, and lets the UI show tables.
@@ -42,6 +44,8 @@ from app.agent.agent import (
     session_history,
 )
 from app.agent.schemas import RankBy, Region
+from app.alerts.monitor import CheckResult, run_check
+from app.alerts.scheduler import start_scheduler
 from app.config import ROOT, get_hub, get_settings, load_hubs
 from app.data_sources.ingest import history_window
 from app.scoring.engine import config_fingerprint, rank
@@ -62,7 +66,10 @@ async def lifespan(app: FastAPI):
         log.warning("No weather data. Run: uv run python -m app.data_sources.ingest")
     tools.SCORES.get(conn)
     conn.close()
+    scheduler = start_scheduler()  # daily risk-change check (stage 8)
     yield
+    if scheduler:
+        scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
@@ -193,6 +200,20 @@ def health(conn: Conn) -> HealthResponse:
         scoring_config=config_fingerprint(),
         llm_configured=bool(get_settings().anthropic_api_key),
     )
+
+
+@app.post("/alerts/check", response_model=CheckResult, tags=["alerts"])
+def alerts_check(conn: Conn, notify: bool = True) -> CheckResult:
+    """Run the risk-change check now (the scheduler runs the same thing daily).
+
+    Uses the data already stored, so it's fast. The scheduled run also fetches new data.
+    """
+    return run_check(conn, notify=notify)
+
+
+@app.get("/alerts", tags=["alerts"])
+def alerts(conn: Conn, limit: Annotated[int, Query(ge=1, le=500)] = 50) -> list[dict]:
+    return db.recent_alerts(conn, limit)
 
 
 # ------------------------------------------------------------------- chat UI (stage 6)

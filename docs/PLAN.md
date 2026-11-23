@@ -81,7 +81,7 @@ Full definition: `config/scoring.yaml`. Code: `app/scoring/`.
 5. **API**: FastAPI `/chat`, `/hubs`, `/hubs/{id}/risk`, `/health`
 6. **Chat UI**: static page with conversation, ranking table and voice input
 7. **Evaluation**: `evals/cases.yaml` plus a runner script (tool choice, numeric correctness, schema validity)
-8. **Alerts (bonus)**: scheduled re-score, diff against the last snapshot, webhook POST
+8. **Alerts (bonus)**: scheduled re-score, diff against the last snapshot, webhook POST. Built as `app/alerts/` (daily APScheduler job + `POST /alerts/check`); a change is a move of at least 2 points or a tier change
 9. **Docs and deploy**: ARCHITECTURE.md, README run instructions, Dockerfile, deploy
 10. **Session export**: save this AI session transcript into `docs/ai-session/` (mandatory deliverable)
 
