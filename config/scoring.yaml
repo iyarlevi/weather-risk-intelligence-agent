@@ -36,7 +36,7 @@ weather_metrics:
 hazards:
   winter:
     label: "Winter storms & extreme cold"
-    weight: 0.25
+    weight: 0.27
     components:
       - {source: weather, metric: snow_days,        lo: 0, hi: 30,  weight: 0.25}
       - {source: weather, metric: heavy_snow_days,  lo: 0, hi: 6,   weight: 0.15}
@@ -46,7 +46,7 @@ hazards:
 
   hurricane_wind:
     label: "Hurricanes & damaging wind"
-    weight: 0.25
+    weight: 0.26
     components:
       # 5 years is too short to see hurricanes reliably, so FEMA's long record leads.
       - {source: fema,    metric: hurricane,          lo: 0,  hi: 0.3, weight: 0.45}
@@ -56,7 +56,7 @@ hazards:
 
   flood:
     label: "Flooding & extreme rain"
-    weight: 0.25
+    weight: 0.27
     components:
       - {source: fema,    metric: inland_flood,        lo: 0,  hi: 6,   weight: 0.25}
       - {source: fema,    metric: coastal_flood,       lo: 0,  hi: 7.5, weight: 0.20}
@@ -74,7 +74,7 @@ hazards:
 
   heat:
     label: "Extreme heat"
-    weight: 0.10   # lower weight: heat mostly slows work rather than closing a hub
+    weight: 0.05   # lowest weight: heat mostly slows work (safety rules) rather than closing a hub
     components:
       - {source: weather, metric: hot_days,          lo: 0, hi: 90, weight: 0.35}
       - {source: weather, metric: extreme_heat_days, lo: 0, hi: 30, weight: 0.35}

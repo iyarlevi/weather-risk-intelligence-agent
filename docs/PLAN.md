@@ -41,11 +41,11 @@ Full definition: `config/scoring.yaml`. Code: `app/scoring/`.
 
 | Hazard (weight) | Components |
 |---|---|
-| Winter (25%) | snow days ≥1 cm/yr, heavy-snow days ≥5 cm/yr, hard-freeze days ≤−15 °C/yr, FEMA winter-weather and ice-storm frequency |
-| Hurricane & wind (25%) | FEMA hurricane and strong-wind frequency, damaging-gust days ≥75 km/h/yr, strongest gust |
-| Flood (25%) | FEMA inland and coastal flood frequency, heavy-rain days ≥25 mm/yr, extreme-rain days ≥50 mm/yr, wettest day |
+| Winter (27%) | snow days ≥1 cm/yr, heavy-snow days ≥5 cm/yr, hard-freeze days ≤−15 °C/yr, FEMA winter-weather and ice-storm frequency |
+| Hurricane & wind (26%) | FEMA hurricane and strong-wind frequency, damaging-gust days ≥75 km/h/yr, strongest gust |
+| Flood (27%) | FEMA inland and coastal flood frequency, heavy-rain days ≥25 mm/yr, extreme-rain days ≥50 mm/yr, wettest day |
 | Tornado & hail (15%) | FEMA tornado and hail frequency (daily reanalysis can't see these storms) |
-| Heat (10%) | hot days ≥35 °C/yr, extreme-heat days ≥38 °C/yr, FEMA heat-wave frequency |
+| Heat (5%) | hot days ≥35 °C/yr, extreme-heat days ≥38 °C/yr, FEMA heat-wave frequency |
 
 - Each component is mapped onto 0–100 using a **fixed scale** (`lo`, `hi`), not min-max across
   hubs. A hub's score then changes only when its own data changes, which keeps alerts meaningful.
