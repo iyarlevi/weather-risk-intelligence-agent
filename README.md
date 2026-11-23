@@ -35,18 +35,6 @@ docker run -p 8000:8000 --env-file .env wria   # then open http://localhost:8000
 
 The image includes the starting database, so it works with no download.
 
-## Deploy (Render)
-
-`render.yaml` describes the service. In the Render dashboard: **New -> Blueprint**, pick this
-GitHub repo, and paste your `ANTHROPIC_API_KEY` when asked (it stays in Render, never in git).
-Render builds the Dockerfile and checks `/health`.
-
-On the free plan the service sleeps after ~15 minutes idle (the first request then takes about
-a minute), and its disk resets on each deploy: chat sessions and alert history start over
-from the starting database. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#5-deployment).
-
-A public URL lets anyone spend your Anthropic credits, so set a spending limit in the
-Anthropic Console.
 
 ## Chat UI
 
@@ -89,15 +77,6 @@ uv run uvicorn app.api.main:app --reload
 ```bash
 curl -s -X POST localhost:8000/chat -H 'content-type: application/json' \
   -d '{"message": "Compare Miami and Houston in terms of hurricane and flood exposure."}'
-```
-
-## Ask the agent from the terminal
-
-```bash
-uv run python -m app.agent.agent "Which hubs in the Midwest are most exposed to winter disruption?"
-# Several questions in one session (the follow-up keeps the context):
-uv run python -m app.agent.agent "Why is Dallas high risk?" "How does it compare to Houston?"
-# Add --json to also print the structured answer
 ```
 
 ## How the agent works
