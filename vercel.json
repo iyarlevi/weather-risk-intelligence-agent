@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/api/main.py": {
+      "maxDuration": 120,
+      "includeFiles": "{config/**,web/**,data/seed/wria-seed.db}",
+      "excludeFiles": "{tests/**,evals/**,docs/**,data/wria.db*}"
+    }
+  },
+  "crons": [
+    { "path": "/alerts/cron", "schedule": "0 6 * * *" }
+  ]
+}

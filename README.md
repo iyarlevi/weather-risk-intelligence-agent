@@ -11,9 +11,39 @@ its answers on public weather and hazard data plus a deterministic scoring model
 ```bash
 uv sync
 cp .env.example .env   # add your ANTHROPIC_API_KEY
-uv run python -m app.data_sources.ingest   # download weather + hazard data into SQLite (~1-2 min)
 uv run uvicorn app.api.main:app --reload
 ```
+
+No download step is needed: the repo ships a starting copy of the database
+(`data/seed/wria-seed.db`, 3.4 MB, the 2021-2025 weather and FEMA data plus a baseline score
+snapshot). On first start it's copied to `data/wria.db`, the working database. To fetch fresh
+data instead, run `uv run python -m app.data_sources.ingest` (~1-2 min), then rebuild the
+starting copy with `uv run python -m app.storage.seed`.
+
+## Deploy to Vercel
+
+The whole FastAPI app (API + chat UI) runs as one Vercel Python function. The settings are in
+`vercel.json` and `[tool.vercel]` in `pyproject.toml`.
+
+```bash
+npx vercel login
+npx vercel link
+npx vercel env add ANTHROPIC_API_KEY production
+npx vercel env add CRON_SECRET production    # any random string of 16+ characters
+npx vercel deploy --prod
+```
+
+How it adapts to serverless (it detects Vercel by the `VERCEL` env var):
+- **Database:** only `/tmp` is writable, so each new instance copies the starting database to
+  `/tmp/wria.db`. Reads are fast and need no external service. Sessions and alert history live
+  only as long as that instance, so a follow-up can lose its context after a cold start.
+  For lasting state you'd swap SQLite for a hosted database (e.g. Turso or Postgres).
+- **Alerts:** there are no background threads, so the in-process scheduler is off. Vercel Cron
+  calls `GET /alerts/cron` daily at 06:00 UTC, with `Authorization: Bearer $CRON_SECRET`. It
+  compares against the baseline that ships in the starting database.
+- **Time limit:** a chat answer takes ~10-30 s. `maxDuration` is set to 120 s.
+- **Cost:** a public URL lets anyone use your Anthropic key. Set a spending limit in the
+  Anthropic Console.
 
 ## Chat UI
 

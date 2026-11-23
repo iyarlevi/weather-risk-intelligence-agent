@@ -155,3 +155,24 @@ def test_alert_endpoints(temp_conn, fake_webhook):
             assert client.get("/alerts").json()[0]["hub_id"] == "miami"
     finally:
         app.dependency_overrides.clear()
+
+
+@needs_data
+def test_cron_endpoint_requires_secret(temp_conn, monkeypatch):
+    def conn_override():
+        yield temp_conn
+
+    app.dependency_overrides[get_conn] = conn_override
+    import app.api.main as api
+
+    try:
+        with TestClient(app) as client:
+            monkeypatch.setattr(api, "get_settings", lambda: get_settings())
+            assert client.get("/alerts/cron").status_code == 503  # no secret configured
+            s = get_settings().model_copy(update={"cron_secret": "s3cret-for-tests"})
+            monkeypatch.setattr(api, "get_settings", lambda: s)
+            assert client.get("/alerts/cron").status_code == 401
+            ok = client.get("/alerts/cron", headers={"Authorization": "Bearer s3cret-for-tests"})
+            assert ok.status_code == 200 and ok.json()["baseline"] is True
+    finally:
+        app.dependency_overrides.clear()

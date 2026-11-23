@@ -14,6 +14,7 @@ Endpoints:
   GET    /health                data loaded? API key configured?
   POST   /alerts/check          re-score now, diff with the last snapshot, notify on changes
   GET    /alerts                recent risk-change alerts
+  GET    /alerts/cron           the same check, for Vercel Cron (needs CRON_SECRET)
 
 The /hubs, /rankings and /methodology endpoints never call the LLM. They return the
 deterministic model directly, which keeps them fast and free, and lets the UI show tables.
@@ -30,7 +31,7 @@ from pathlib import Path
 from typing import Annotated
 
 import anthropic
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -209,6 +210,21 @@ def alerts_check(conn: Conn, notify: bool = True) -> CheckResult:
     Uses the data already stored, so it's fast. The scheduled run also fetches new data.
     """
     return run_check(conn, notify=notify)
+
+
+@app.get("/alerts/cron", response_model=CheckResult, tags=["alerts"])
+def alerts_cron(conn: Conn, authorization: Annotated[str | None, Header()] = None) -> CheckResult:
+    """Vercel Cron calls this daily with GET and "Authorization: Bearer $CRON_SECRET".
+
+    Without the secret anyone could trigger webhook posts, so the endpoint stays closed
+    until CRON_SECRET is configured.
+    """
+    secret = get_settings().cron_secret
+    if not secret:
+        raise HTTPException(status_code=503, detail="CRON_SECRET is not configured")
+    if authorization != f"Bearer {secret}":
+        raise HTTPException(status_code=401, detail="bad or missing cron secret")
+    return run_check(conn)
 
 
 @app.get("/alerts", tags=["alerts"])

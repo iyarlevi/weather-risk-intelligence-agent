@@ -2,7 +2,9 @@
 
 from datetime import date
 
-from app.config import get_hub, load_hubs, regions
+import pytest
+
+from app.config import get_hub, get_settings, load_hubs, regions
 from app.data_sources import fema_nri, nws, open_meteo
 from app.data_sources.ingest import history_window
 from app.storage import db
@@ -123,3 +125,15 @@ def test_storage_round_trip(tmp_path):
     )
     assert db.get_nri(conn, "08031")["hazards"]["hail"]["risk_score"] == 99.0
     assert db.get_nri(conn, "00000") is None
+
+
+def test_app_database_starts_from_seed(tmp_path, monkeypatch):
+    # No database yet (fresh clone / new Vercel instance): connect() copies the seed.
+    if not db.SEED_DB_PATH.exists():
+        pytest.skip("no seed database")
+
+    settings = get_settings().model_copy(update={"database_path": tmp_path / "app.db"})
+    monkeypatch.setattr(db, "get_settings", lambda: settings)
+    conn = db.connect()
+    assert conn.execute("SELECT COUNT(*) FROM weather_daily").fetchone()[0] > 30_000
+    assert db.latest_snapshot(conn) is not None  # the baseline for alerts ships with it

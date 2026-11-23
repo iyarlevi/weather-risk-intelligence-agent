@@ -7,12 +7,13 @@ whole store is one file that ships with the app. No database server to run.
 from __future__ import annotations
 
 import json
+import shutil
 import sqlite3
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-from app.config import get_settings
+from app.config import SEED_DB_PATH, get_settings
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS weather_daily (
@@ -79,8 +80,13 @@ CREATE TABLE IF NOT EXISTS fetch_log (
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
+    is_app_db = path is None  # an explicit path (tests, seed builder) is used as given
     path = Path(path or get_settings().database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    if is_app_db and not path.exists() and SEED_DB_PATH.exists():
+        # First start (fresh clone, or a new Vercel instance with an empty /tmp): begin from
+        # the committed starting copy instead of an empty database.
+        shutil.copyfile(SEED_DB_PATH, path)
     # check_same_thread=False: FastAPI may use the connection from worker threads.
     conn = sqlite3.connect(path, check_same_thread=False)
     conn.row_factory = sqlite3.Row  # rows behave like dicts: row["date"]
