@@ -106,6 +106,15 @@ docs/            Plan, architecture, AI session log
 The ingest is idempotent: it skips data that is already cached, and it waits and retries
 when Open-Meteo's free tier rate-limits it. Run it with `--refresh` to re-download everything.
 
+## Evaluation
+
+17 cases graded by code (tool choice, exact numbers from the engine, rankings, follow-ups, and
+honesty on out-of-scope questions). Details and baseline: [evals/README.md](evals/README.md).
+
+```bash
+uv run python -m evals.run
+```
+
 ## Tests
 
 ```bash

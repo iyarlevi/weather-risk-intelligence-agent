@@ -11,3 +11,4 @@ data/cache/
 *.db-shm
 *.db-wal
 .claude/
+evals/results/

@@ -1,0 +1,170 @@
+# Evaluation cases for the Weather Risk Intelligence agent.
+#
+# Each case is one conversation (`turns`). The checks apply to the agent's LAST answer.
+# Expected numbers are NOT written here. The grader computes them from the deterministic
+# engine at run time, so the eval follows the data/weights instead of going stale.
+#
+# Check types (implemented in evals/grader.py):
+#   tools_any:          at least one of these tools was called in the last turn
+#   answer_type_in:     answer.answer_type is one of these
+#   hubs_include:       these hub ids are in answer.hubs
+#   hubs_exclude:       none of these ids appear in answer.hubs or answer.ranking
+#   ranking_top:        answer.ranking starts with the engine's top-N for {rank_by, region}
+#   top_hub_named:      the engine's #1 hub for {rank_by, region} is in answer.hubs
+#   figure:             some number in key_figures/ranking matches the engine's value
+#                       (kinds: weather_stat, hazard_score, composite_score)
+#   text_includes_any:  the answer text mentions at least one of these words
+#   no_figures_with_unit: no key figure uses these units (e.g. invented "%" or "$")
+#   no_figure_label_contains: no key figure label contains these terms (e.g. a year with no data)
+#   ranking_empty:      answer.ranking is []
+# Every case also fails if the grounding check raised warnings (numbers not from tools).
+
+cases:
+  # ---------------------------------------------------- the assignment's 4 examples
+  - id: midwest_winter_ranking
+    tags: [assignment, ranking]
+    turns: ["Which hubs in the Midwest are most exposed to winter disruption?"]
+    checks:
+      tools_any: [rank_hubs]
+      answer_type_in: [ranking]
+      ranking_top: {rank_by: winter, region: Midwest, n: 3}
+
+  - id: compare_miami_houston
+    tags: [assignment, comparison]
+    turns: ["Compare Miami and Houston in terms of hurricane and flood exposure."]
+    checks:
+      tools_any: [compare_hubs, get_hub_risk]
+      answer_type_in: [comparison]
+      hubs_include: [miami, houston]
+      figure:
+        - {kind: hazard_score, hub: houston, hazard: flood}
+        - {kind: hazard_score, hub: miami, hazard: hurricane_wind}
+
+  - id: denver_snow_last_year
+    tags: [assignment, statistic]
+    turns: ["What percentage of days in Denver last year had snowfall?"]
+    checks:
+      tools_any: [weather_stat]
+      answer_type_in: [statistic]
+      figure:
+        - {kind: weather_stat, hub: denver, stat: snowfall, year: last, field: percent}
+
+  - id: dallas_why_high
+    tags: [assignment, explanation]
+    turns: ["Why is the Dallas hub's weather disruption risk high?"]
+    checks:
+      tools_any: [get_hub_risk]
+      answer_type_in: [explanation]
+      hubs_include: [dallas]
+      figure:
+        - {kind: composite_score, hub: dallas}
+      text_includes_any: [flood]   # Dallas's largest contributor
+
+  # ------------------------------------------------------------- more rankings
+  - id: top3_overall
+    tags: [ranking]
+    turns: ["Which three hubs have the highest overall weather disruption risk?"]
+    checks:
+      tools_any: [rank_hubs]
+      ranking_top: {rank_by: composite, region: null, n: 3}
+
+  - id: worst_heat_hub
+    tags: [ranking]
+    turns: ["Which hub is most exposed to extreme heat?"]
+    checks:
+      tools_any: [rank_hubs]
+      top_hub_named: {rank_by: heat, region: null}
+
+  - id: northeast_hurricane_top
+    tags: [ranking]
+    turns: ["Which Northeast hub has the highest hurricane and wind exposure?"]
+    checks:
+      tools_any: [rank_hubs, compare_hubs]
+      top_hub_named: {rank_by: hurricane_wind, region: Northeast}
+
+  # ------------------------------------------------------------- statistics
+  - id: minneapolis_hard_freeze_2024
+    tags: [statistic]
+    turns: ["How many days in 2024 did Minneapolis drop to -15°C or colder?"]
+    checks:
+      tools_any: [weather_stat]
+      figure:
+        - {kind: weather_stat, hub: minneapolis, stat: hard_freeze, year: 2024, field: matching_days}
+
+  - id: houston_heavy_rain_window
+    tags: [statistic]
+    turns: ["What share of days in Houston had heavy rain (25 mm or more) between 2021 and 2025?"]
+    checks:
+      tools_any: [weather_stat]
+      figure:
+        - {kind: weather_stat, hub: houston, stat: heavy_rain, year: null, field: percent}
+
+  # ---------------------------------------------------------------- follow-ups
+  - id: followup_compare_it
+    tags: [follow_up, comparison]
+    turns:
+      - "Why does Chicago have the overall risk score it has?"
+      - "How does it compare with Milwaukee?"
+    checks:
+      tools_any: [compare_hubs, get_hub_risk]
+      hubs_include: [chicago, milwaukee]
+
+  - id: followup_top_one
+    tags: [follow_up, explanation]
+    turns:
+      - "Rank the South hubs by flood risk."
+      - "Why is the top one ranked first?"
+    checks:
+      tools_any: [get_hub_risk, compare_hubs]
+      top_hub_named: {rank_by: flood, region: South}
+
+  # ---------------------------------------------------------- methodology
+  - id: methodology_weights
+    tags: [methodology]
+    turns: ["How is the overall risk score calculated, and what weight does heat get?"]
+    checks:
+      tools_any: [get_methodology]
+      answer_type_in: [methodology, explanation]
+      text_includes_any: ["5%", "0.05"]
+
+  # ------------------------------------------------------------ live data
+  - id: miami_live_alerts
+    tags: [live]
+    turns: ["Are there any active weather alerts at the Miami hub right now?"]
+    checks:
+      tools_any: [active_alerts]
+      hubs_include: [miami]
+
+  # ------------------------------------------------- scope / honesty (negatives)
+  - id: unknown_hub_portland
+    tags: [negative, scope]
+    turns: ["How exposed is our Portland hub to flooding?"]
+    checks:
+      answer_type_in: [out_of_scope, clarification]
+      hubs_exclude: [portland]
+      text_includes_any: ["not one of", "not a company hub", "no portland", "isn't one of", "not among"]
+
+  - id: off_topic
+    tags: [negative, scope]
+    turns: ["What's the best pizza place near the Chicago hub?"]
+    checks:
+      answer_type_in: [out_of_scope]
+      ranking_empty: true
+
+  - id: year_outside_data
+    tags: [negative, honesty]
+    turns: ["What percentage of days in Denver in 2015 had snowfall?"]
+    checks:
+      answer_type_in: [out_of_scope, clarification, statistic]
+      # No 2015 data exists. Offering a clearly labeled other year (e.g. 2025) is fine;
+      # presenting any number as 2015 is not.
+      no_figure_label_contains: ["2015"]
+      text_includes_any: ["2021", "not available", "no data", "outside"]
+
+  - id: no_dollar_estimates
+    tags: [negative, honesty]
+    turns: ["How many dollars per year does the Dallas hub lose to weather?"]
+    checks:
+      answer_type_in: [out_of_scope, clarification, explanation]
+      no_figures_with_unit: ["$", "USD", "dollars"]
+      text_includes_any: ["exposure", "not dollar", "no cost", "financial", "loss data"]

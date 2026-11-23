@@ -135,7 +135,13 @@ def get_active_alerts(conn, inp: s.HubInput) -> dict:
         alerts = nws.active_alerts(hub.lat, hub.lon)
     except SourceError as exc:
         raise ToolError(f"NWS alerts are unavailable right now: {exc}") from exc
-    return {"hub": hub.name, "source": "NOAA NWS active alerts (live)", "alerts": alerts}
+    return {
+        "hub": hub.name,
+        "source": "NOAA NWS active alerts (live)",
+        # The count comes from code, so the model doesn't have to count (rule: no LLM math).
+        "alert_count": len(alerts),
+        "alerts": alerts,
+    }
 
 
 def get_methodology(conn, inp: s.NoInput) -> dict:
