@@ -36,6 +36,12 @@ MAX_TOKENS = 16000
 MAX_TOOL_ROUNDS = 8  # safety cap; the example questions need 1-3 rounds
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
+# One lock per chat session, shared by every agent instance in the process. The API creates
+# a short-lived agent per request (each with its own SQLite connection), so the locks live
+# here: two requests for the same session wait for each other instead of mixing history.
+_SESSION_LOCKS: dict[str, threading.Lock] = {}
+_LOCKS_GUARD = threading.Lock()
+
 
 class AgentError(RuntimeError):
     """The agent couldn't produce an answer (API down, refusal, invalid output, ...)."""
@@ -74,11 +80,11 @@ class WeatherRiskAgent:
         self.client = client or anthropic.Anthropic(api_key=key)
         self.model = model
         self._tool_defs = tools.tool_definitions()
-        self._session_locks: dict[str, threading.Lock] = {}
 
-    def _lock_for(self, session_id: str) -> threading.Lock:
-        # One message at a time per session, so two requests can't interleave its history.
-        return self._session_locks.setdefault(session_id, threading.Lock())
+    @staticmethod
+    def _lock_for(session_id: str) -> threading.Lock:
+        with _LOCKS_GUARD:
+            return _SESSION_LOCKS.setdefault(session_id, threading.Lock())
 
     def _call_claude(self, messages: list[dict], allow_tools: bool):
         try:

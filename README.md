@@ -15,6 +15,29 @@ uv run python -m app.data_sources.ingest   # download weather + hazard data into
 uv run uvicorn app.api.main:app --reload
 ```
 
+## API
+
+Start the server, then open the interactive docs at <http://localhost:8000/docs>:
+
+```bash
+uv run uvicorn app.api.main:app --reload
+```
+
+| Method | Path | What it does | Calls the LLM? |
+|---|---|---|---|
+| `POST` | `/chat` | Ask the agent. Body: `{"message": "...", "session_id": "optional"}`. Reuse the returned `session_id` for follow-ups. | Yes |
+| `DELETE` | `/chat/{session_id}` | Forget a conversation | No |
+| `GET` | `/hubs?region=` | Hub list | No |
+| `GET` | `/hubs/{hub}/risk` | Full score breakdown for one hub | No |
+| `GET` | `/rankings?hazard=&region=&limit=` | Ranking by composite or one hazard | No |
+| `GET` | `/methodology` | Weights, scales, limitations | No |
+| `GET` | `/health` | Data loaded? API key configured? | No |
+
+```bash
+curl -s -X POST localhost:8000/chat -H 'content-type: application/json' \
+  -d '{"message": "Compare Miami and Houston in terms of hurricane and flood exposure."}'
+```
+
 ## Ask the agent from the terminal
 
 ```bash
