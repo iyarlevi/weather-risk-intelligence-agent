@@ -17,6 +17,7 @@ _cache: dict[tuple[float, float], tuple[float, list[dict]]] = {}
 
 
 def active_alerts(lat: float, lon: float) -> list[dict]:
+    # NWS rejects coordinates with more than 4 decimals; 2 decimals (~1 km) is plenty.
     key = (round(lat, 2), round(lon, 2))
     hit = _cache.get(key)
     if hit and time.time() - hit[0] < _CACHE_TTL_S:

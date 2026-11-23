@@ -48,10 +48,12 @@ CREATE TABLE IF NOT EXISTS fetch_log (
 def connect(path: Path | None = None) -> sqlite3.Connection:
     path = Path(path or get_settings().database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    # check_same_thread=False: FastAPI may use the connection from worker threads.
     conn = sqlite3.connect(path, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+    conn.row_factory = sqlite3.Row  # rows behave like dicts: row["date"]
+    # WAL mode lets the API read while the ingest/alert job writes.
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.executescript(SCHEMA)
+    conn.executescript(SCHEMA)  # CREATE IF NOT EXISTS, so safe on every start
     return conn
 
 
@@ -65,6 +67,8 @@ WEATHER_COLS = ("snowfall_cm", "precip_mm", "tmax_c", "tmin_c", "gust_kmh")
 
 
 def upsert_weather(conn: sqlite3.Connection, hub_id: str, rows: Iterable[dict]) -> int:
+    # INSERT OR REPLACE on the (hub_id, date) key makes re-running the ingest safe:
+    # re-fetched days overwrite old values instead of creating duplicates.
     data = [(hub_id, r["date"], *(r.get(c) for c in WEATHER_COLS)) for r in rows]
     conn.executemany(
         f"INSERT OR REPLACE INTO weather_daily (hub_id, date, {', '.join(WEATHER_COLS)}) "
@@ -90,6 +94,7 @@ def get_weather(
 
 
 def weather_coverage(conn: sqlite3.Connection, hub_id: str) -> tuple[str | None, str | None, int]:
+    """(first date, last date, number of days) stored for a hub. Used to skip re-downloads."""
     row = conn.execute(
         "SELECT MIN(date), MAX(date), COUNT(*) FROM weather_daily WHERE hub_id = ?", (hub_id,)
     ).fetchone()
@@ -119,7 +124,7 @@ def get_nri(conn: sqlite3.Connection, county_fips: str) -> dict | None:
     if not row:
         return None
     out = dict(row)
-    out["hazards"] = json.loads(out.pop("data"))
+    out["hazards"] = json.loads(out.pop("data"))  # stored as JSON text, returned as a dict
     return out
 
 

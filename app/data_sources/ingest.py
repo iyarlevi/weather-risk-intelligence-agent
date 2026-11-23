@@ -28,6 +28,7 @@ def ingest_weather(conn, refresh: bool = False) -> None:
     expected_days = (end - start).days + 1
     for hub in load_hubs():
         lo, hi, n = db.weather_coverage(conn, hub.id)
+        # Skip the download only if the full window is already stored with no gaps.
         if not refresh and lo == start.isoformat() and hi == end.isoformat() and n == expected_days:
             print(f"  weather  {hub.id:<14} cached ({n} days)")
             continue
@@ -44,6 +45,7 @@ def ingest_nri(conn, refresh: bool = False) -> None:
     if not missing:
         print(f"  nri      all {len(hubs)} counties cached")
         return
+    # Several hubs could share a county, so de-duplicate before asking FEMA.
     records = fema_nri.fetch_counties(sorted(set(missing)))
     for rec in records:
         db.upsert_nri(conn, rec)

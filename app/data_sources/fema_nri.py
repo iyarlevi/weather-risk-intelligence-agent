@@ -40,6 +40,8 @@ def _out_fields() -> str:
 
 
 def fetch_counties(county_fips: list[str]) -> list[dict]:
+    # Fetch all counties in one request. isdigit() keeps anything but FIPS codes
+    # out of the query string.
     in_list = ",".join(f"'{f}'" for f in county_fips if f.isdigit())
     payload = get_json(
         URL,
@@ -64,6 +66,7 @@ def parse_county(attrs: dict) -> dict:
         }
         for p, key in HAZARDS.items()
     }
+    # FEMA's all-hazard composite, kept for context. Our own score is built in app/scoring.
     hazards["overall"] = {
         "risk_score": attrs.get("RISK_SCORE"),
         "rating": attrs.get("RISK_RATNG"),

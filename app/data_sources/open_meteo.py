@@ -31,6 +31,7 @@ def fetch_daily(lat: float, lon: float, start: date, end: date) -> list[dict]:
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
             "daily": ",".join(DAILY_VARS),
+            # Local timezone so each "day" is a local calendar day at the hub.
             "timezone": "auto",
         },
         timeout=60.0,

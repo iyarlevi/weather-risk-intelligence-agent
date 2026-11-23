@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     http_user_agent: str = "weather-risk-intelligence-agent/0.1"
 
 
-@lru_cache
+@lru_cache  # read .env once per process
 def get_settings() -> Settings:
     return Settings()
 
@@ -48,6 +48,8 @@ def load_hubs() -> tuple[Hub, ...]:
 
 
 def get_hub(hub_id: str) -> Hub | None:
+    # Accept either the id ("salt_lake") or the display name ("Salt Lake City"),
+    # because the LLM may pass whichever the user typed.
     key = hub_id.strip().lower().replace(" ", "_")
     for hub in load_hubs():
         if key in (hub.id, hub.name.lower().replace(" ", "_")):
